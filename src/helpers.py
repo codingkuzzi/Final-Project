@@ -12,13 +12,15 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 
 # Functions for EDA
 def display_distribution_of_labels(dataframe):
+    """
+    Displays the distribution of labels (real or fake) in the dataset using a count plot
+    Parameters:
+    - dataframe (pandas.DataFrame): The dataset containing the labels column ('label') 
+                                  with class values (e.g., 'real', 'fake').
+    """
     sns.countplot(x = 'label', data = dataframe)
     plt.title('Distribution of Labels in the Dataset')
     plt.show()
-
-from collections import Counter
-from nltk.corpus import stopwords
-import matplotlib.pyplot as plt
 
 def plot_top_words(articles, is_stopwords, number_to_display):
     """
@@ -99,7 +101,7 @@ def remove_stopwords(articles):
     final_articles_text = [i.strip() for i in articles.split() if i.strip().lower() not in stop_words and i.strip().lower().isalpha()]
     return " ".join(final_articles_text)
 
-# Helper caller to remove the noisy text and stopwords
+# Helper function to remove the noisy text and stopwords
 def denoise_text(text):
     text = remove_html_tags(text)
     text = remove_urls(text)
@@ -107,14 +109,34 @@ def denoise_text(text):
     text = remove_stopwords(text)
     return text
 
-# Helper caller for processing data but keeping stopwords in the dataset
+# Helper function for processing data but keeping stopwords in the dataset
 def denoise_text_keep_stopwords(text):
     text = remove_html_tags(text)
     text = remove_urls(text)
     text = remove_spec_numer_char(text)
     return text
 
+# Function to remove the words 'Reuters' or 'reuters' from articles
+def remove_reuters(articles):
+    return re.sub(r'\b[Rr]euters\b', '', articles)
+
+# Helper function to denoise text excluding 'Reuters' or 'reuters' words from articles
+def denoise_text_and_remove_reuters(text):
+    text = remove_html_tags(text)
+    text = remove_urls(text)
+    text = remove_spec_numer_char(text)
+    text = remove_reuters(text)  # Include the new function here
+    text = remove_stopwords(text)
+    return text
+
 def display_number_of_words_in_text(dataframe):
+    """
+    Displays a histogram showing the distribution of the number of words in text for true and fake news articles.
+    Parameters:
+    - dataframe (pandas.DataFrame): The dataset containing the news articles in a 'text' column and the corresponding
+      'label' column, where 1 represents true articles and 0 represents fake articles.
+    """
+
     fig,(ax1,ax2)=plt.subplots(1,2,figsize=(12,4))
     text_len = dataframe[dataframe['label'] == 1]['text'].str.split().map(lambda x: len(x))
     ax1.hist(text_len, color = 'green')
@@ -125,13 +147,18 @@ def display_number_of_words_in_text(dataframe):
     fig.suptitle('Words in texts')
     plt.show()
 
-# The function to get top n-grams from text representation
-# The function accepts three parameters:
-#  - news: Pandas Series containing the news text.
-#  - n: The number of top n-grams to retrieve.
-#  - g: The gram value, specifying whether it's unigram (1), bigram (2), trigram (3), etc.
-# Note: Here we just create the visual presentation of bigrams and trigrams frequencies, so we will use CountVectorizer tool from sklearn library to build our Bag of Words in this function. We selected CountVectorizer in this particular case as it suits well for simple task of creating vocabulary based on the frequency of words in a document.
 def get_top_text_ngrams(news_text, n, gram_value):
+    """
+    This function uses CountVectorizer to compute the frequency of n-grams (based on the specified gram_value) 
+    in the provided news articles and returns a dictionary of the top N most frequent n-grams along with their counts.
+    Parameters:
+    - news_text (iterable): A collection (e.g., list or pandas Series) of news articles (strings) from which the n-grams 
+      will be extracted.
+    - n (int): The number of top n-grams to return based on their frequency.
+    - gram_value (int): The value of n for the n-grams (e.g., 1 for unigrams, 2 for bigrams, 3 for trigrams).
+    Returns:
+    dict: A dictionary where the keys are the top N n-grams (strings) and the values are their respective counts (integers).
+    """
     # Create an instance of CountVectorizer with specified n-gram range
     vectorizer = CountVectorizer(ngram_range=(gram_value, gram_value)).fit(news_text)
     # Transform the reviews into a sparse matrix of n-gram counts
@@ -147,7 +174,12 @@ def get_top_text_ngrams(news_text, n, gram_value):
 
 # The function to plot n-grams dictionary data
 def plot_top_ngrams(ngrams_dict, title):
-    # Create a DataFrame from the n-grams dictionary
+    """
+    This function takes a dictionary of n-grams and their counts and visualizes them in a bar chart using Plotly Express.
+    Parameters:
+    - ngrams_dict (dict): A dictionary where the keys are n-grams (strings) and the values are their respective counts (integers).
+    - title (str): The title of the plot, providing context for the data being visualized.
+    """
     ngrams_df = pd.DataFrame(columns = ["Common_words" , 'Count'])
     ngrams_df["Common_words"] = list(ngrams_dict.keys())
     ngrams_df["Count"] = list(ngrams_dict.values())
@@ -176,7 +208,17 @@ def evaluate_model(test_labels, predicted_labels):
   return model_results
 
 # A function to evaluate models performance on both training and test datasets.
-def get_score(model, train_x,test_x,train_y,test_y):
+def get_score(model, train_x, test_x, train_y, test_y):
+    """
+    This function fits the model to the provided training data and calculates its accuracy score on both the training 
+    and test datasets. It then prints the training and testing accuracy scores.
+    Parameters:
+    - model: A machine learning model object that implements the fit and score methods.
+    - train_x (array-like): Training data features.
+    - test_x (array-like): Test data features.
+    - train_y (array-like): Labels for the training data.
+    - test_y (array-like): Labels for the test data.
+    """
     model.fit(train_x, train_y)
     train_score = model.score(train_x, train_y)
     test_score = model.score(test_x, test_y)
@@ -185,6 +227,11 @@ def get_score(model, train_x,test_x,train_y,test_y):
 
 # A function to plot confusion matrix
 def plot_confusion_matrix(cm):
+    """
+    This function takes a confusion matrix as input and visualizes it using a heatmap. 
+    Parameters:
+    - cm (array-like): Confusion matrix 
+    """
     print(cm)
     ax= plt.subplot()
     sns.heatmap(cm, annot=True, fmt='g', ax=ax);  #annot=True to annotate cells, ftm='g' to disable scientific notation
@@ -231,8 +278,20 @@ def plot_accuracy_vs_efficiency(dataframe, classifier_name, hue_param, style_par
     plt.grid(True)
     plt.show()
 
-# A function to create a bar plot that visually compares the performance or training efficiency of different classifiers, segmented by various feature extraction methods.
 def plot_comparison_by_classifier_and_feature_extraction(dataframe, param_to_compare):
+    """
+    Creates a bar plot that visually compares the performance or training efficiency of different classifiers,
+    segmented by various feature extraction methods.
+
+    Parameters:
+    dataframe (pd.DataFrame): A pandas DataFrame containing the results of classifiers. It should include the following columns:
+                              - 'classifier': Name of the classifier (e.g., 'Naive Bayes', 'Logistic Regression', etc.).
+                              - 'feature_extraction': The feature extraction method used (e.g., 'TF-IDF', 'CountVectorizer').
+                              - 'mean_test_score': Mean test score of the model.
+                              - 'mean_fit_time': Mean fit time of the model.
+    param_to_compare (str): The parameter to compare, either 'mean_test_score' for performance comparison or 'mean_fit_time' for
+                            training efficiency comparison.
+    """
     plt.figure(figsize=(10, 8))
 
     algo_model_figure = sns.barplot(y='classifier', x=param_to_compare, hue='feature_extraction', data=dataframe, width=0.5)
@@ -259,7 +318,7 @@ def plot_comparison_by_classifier_and_feature_extraction(dataframe, param_to_com
 
     plt.show()
 
-def visualize_classifier_results(df, classifier_name):
+def visualize_classifier_results_with_params(df, classifier_name, hue_param, size_param, style_param):
     """
     Visualizes the performance and training efficiency of a classifier using different
     vectorization techniques, parameter configurations, and stopword settings.
@@ -268,59 +327,63 @@ def visualize_classifier_results(df, classifier_name):
     df (DataFrame): A pandas DataFrame containing the results of classifier models.
                     The DataFrame should have the following columns:
                     - Vectorizer: The vectorization technique used (TF-IDF or CountVectorizer).
-                    - use_idf: Whether IDF was used (True/False or None).
-                    - C: The regularization parameter (if applicable).
-                    - ngram_range: The n-gram range used.
-                    - Stopwords: Whether stopwords were included ('Yes' or 'No').
+                    - use_idf: Whether IDF was used (True/False or None) for TF-IDF models.
+                    - C: The regularization parameter for models like Logistic Regression or SVC (if applicable, or can be None).
+                    - alpha: The regularization parameter for SGD (if applicable, or can be None).
+                    - n-gram range: The n-gram range used for the vectorizer (e.g., (1, 1), (1, 2), etc.).
+                    - With Stopwords: Flag indicating whether stopwords were included (True for included, False for excluded).
                     - Mean Test Score: The mean test accuracy of the model.
-                    - Mean Fit Time: The mean training time of the model.
-    classifier_name (str): The name of the classifier to display in the plot titles.
+                    - Mean Fit Time: The mean training time of the model in seconds.                
+    classifier_name (str): The name of the classifier to display in the plot titles (e.g., 'Logistic Regression', 'Naive Bayes').
+    hue_param (str): The column name to use for coloring points in the scatter plot (e.g., 'C', 'alpha').
+    size_param (str): The column name to use for adjusting the size of points in the scatter plot (e.g., 'With Stopwords').
+    style_param (str): The column name to use for adjusting the style of points in the scatter plot (e.g., 'n-gram range').
     """
     
-    # Set the style and context for the plots
     sns.set(style="whitegrid")
     
-    # Filter data for TF-IDF and CountVectorizer separately
     tfidf_df = df[df['Vectorizer'] == 'TF-IDF']
     count_vect_df = df[df['Vectorizer'] == 'CountVectorizer']
     
     # Create subplots
     fig, axes = plt.subplots(1, 2, figsize=(15, 6), sharey=True)
     
-    # Plot for TF-IDF
+    # Define a color palette
+    color_palette = {0.1: 'blue', 1: 'green', 10: 'red', 0.0001: 'purple', 0.001: 'orange', 0: 'red', (1, 1): 'blue', (1, 2): 'green', (1, 3): 'purple'}
+
     sns.scatterplot(
         ax=axes[0],
         data=tfidf_df,
         x='Mean Fit Time',
         y='Mean Test Score',
-        hue='Stopwords',
-        style='ngram_range',
-        size='C',
-        palette='Set1',
-        sizes=(50, 200),
+        hue=hue_param, 
+        style=style_param,
+        size=size_param, 
+        sizes=(50, 150),  # Set size range
+        palette=color_palette,
         legend='full'
     )
-    axes[0].set_title(f'{classifier_name} Performance with TF-IDF Vectorizer')
-    axes[0].set_xlabel('Mean Fit Time (seconds)')
-    axes[0].set_ylabel('Mean Test Score')
     
-    # Plot for CountVectorizer
     sns.scatterplot(
         ax=axes[1],
         data=count_vect_df,
         x='Mean Fit Time',
         y='Mean Test Score',
-        hue='Stopwords',
-        style='ngram_range',
-        size='C',
-        palette='Set2',
-        sizes=(50, 200),
+        hue=hue_param,  
+        style=style_param,
+        size=size_param,  
+        sizes=(50, 150),  # Set size range
+        palette=color_palette,
         legend='full'
     )
+    
+    axes[0].set_title(f'{classifier_name} Performance with TF-IDF Vectorizer')
+    axes[0].set_xlabel('Mean Fit Time (seconds)')
+    axes[0].set_ylabel('Mean Test Score')
+    
     axes[1].set_title(f'{classifier_name} Performance with CountVectorizer')
     axes[1].set_xlabel('Mean Fit Time (seconds)')
     
-    # Adjust layout and show plot
     plt.tight_layout()
     plt.show()
 
@@ -347,10 +410,9 @@ def predict_user_input_text(user_input_text, model):
     # Output the prediction
     print(f"Predicted Label for the given text: {predicted_label}")
 
-# Function to evaluate the selected model on the test dataset 
 def evaluate_model_predictions(test_text_data, test_label_data, model):
     """
-    Evaluates the selected model on the test dataset and prints the output when predictions are incorrect,
+    Function to test the selected model on the test dataset and print the output when predictions are incorrect,
     along with the number and percentage of incorrect predictions out of the total.
 
     Parameters:
@@ -369,12 +431,12 @@ def evaluate_model_predictions(test_text_data, test_label_data, model):
     for i, pred in enumerate(predictions):
         # Get actual label value
         actual_label_value = test_label_data.iloc[i]
-        predicted_sentiment = "Real" if pred == 1 else "Fake"
+        predicted_label = "Real" if pred == 1 else "Fake"
         actual_label = "Real" if actual_label_value == 1 else "Fake"
         
         # Check if the prediction is correct
         if pred != actual_label_value:
-            print(f"Review {i}: Predicted Label - {predicted_sentiment}, Actual Label - {actual_label} (Incorrect)")
+            print(f"Review {i}: Predicted Label - {predicted_label}, Actual Label - {actual_label} (Incorrect)")
             incorrect_count += 1
 
     # Calculate percentage of incorrect predictions
